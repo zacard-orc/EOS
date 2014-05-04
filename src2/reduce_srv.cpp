@@ -3,12 +3,12 @@
 */
 #include "tools.h"
 
-#define MAXLINE 100         //从SOCKET读取的字符数
+#define MAXCHARNUM 512         //从SOCKET读取的字符数
 #define LISTENQ 2000        //监听队列长度
 #define SERV_PORT 9999      //对外提供的服务端口
 #define EP_INS_NUM 2048     //总共监控多少个EPOLL实例数
 #define EP_HINS_NUM 2000	//每一次WAIT时能处理的EPOLL实例数
-#define EP_TXT_LEN 100      //每次收到的报文长度设定
+#define EP_TXT_LEN 512     //每次收到的报文长度设定
 #define HELLO  "ICU"
 
 using namespace std;
@@ -78,6 +78,7 @@ int main()
           {
                if(events[i].data.fd==listenfd)    
                {
+					//cout<<"Step 1 start"<<endl;
 					n_client_len = sizeof(clientaddr); 
                     connfd = accept(listenfd,(struct sockaddr *)&clientaddr, (socklen_t *)&n_client_len);
                     if(connfd<0){
@@ -87,17 +88,17 @@ int main()
 					cout<<"RECV..."<<endl;
 					SetUnBlock(connfd);
                     ev.data.fd=connfd;
-                    ev.events=EPOLLIN|EPOLLET;
+                    ev.events=EPOLLIN|EPOLLET; 
                     epoll_ctl(epfd,EPOLL_CTL_ADD,connfd,&ev);
-					cout<<"Step 1 end"<<endl;
+					//cout<<"Step 1 end"<<endl;
                }
 			   //如果是已经连接的用户，并且收到数据，那么进行读入。
 			   //把新数据这件事儿在EPOLL EVENT 中注册新FD，如果没数据，则关闭EPOLL.EVENTS.DATA.FD
                else if(events[i].events&EPOLLIN)    
                {
-				    cout<<"Step 2 start"<<endl;
+				    //cout<<"Step 2 start"<<endl;
                     if ((sockfd = events[i].data.fd) < 0) continue;
-                    if ((n_readflag= read(sockfd, RECV_MSG[i], MAXLINE)) < 0) {
+                    if ((n_readflag= read(sockfd, RECV_MSG[i], MAXCHARNUM)) < 0) {
                          if (errno == ECONNRESET) {
                               close(sockfd);
                               events[i].data.fd = -1;
@@ -106,23 +107,24 @@ int main()
                     } else if (n_readflag == 0) {
                         events[i].data.fd = -1;
                     } else {
-						cout<<n_call++<<":"<<RECV_MSG[i];
+						cout<<RECV_MSG[i]<<endl;
+						//cout<<n_call++<<"__"<<RECV_MSG[i]<<endl;
 					}
 					ev.data.fd=sockfd;
                     ev.events=EPOLLOUT|EPOLLET;
                     epoll_ctl(epfd,EPOLL_CTL_MOD,sockfd,&ev);
-					cout<<"Step 2 end"<<endl;
+					//cout<<"Step 2 end"<<endl;
                }
                else if(events[i].events&EPOLLOUT)
                {   
-			   		cout<<"Step 3 start"<<endl;
+			   		//cout<<"Step 3 start"<<endl;
                     sockfd = events[i].data.fd;
                    	write(events[i].data.fd,ANSW_MSG,strlen(ANSW_MSG));
                     bzero(RECV_MSG[i],EP_TXT_LEN);
                     ev.data.fd=sockfd;
                     ev.events=EPOLLIN|EPOLLET;
                     epoll_ctl(epfd,EPOLL_CTL_MOD,sockfd,&ev);
-					cout<<"Step 3 end"<<endl;
+					//cout<<"Step 3 end"<<endl;
                }
           }
      }

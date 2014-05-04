@@ -7,7 +7,8 @@
 
 int main()
 {
-	int servfd,clifd,length=0;
+	std::ios::sync_with_stdio(false);
+	int clifd,length=0;
 	struct sockaddr_in servaddr,cliaddr;
 	socklen_t socklen = sizeof(servaddr);
 	char buf[BUFFER_SIZE];
@@ -45,14 +46,10 @@ int main()
 
 	while(getline(cin,line))
 	{
-	  //memset(buf,100,0);
+	  cout<<line<<endl;
       send(clifd,line.c_str(),line.length(),0);
       length=recv(clifd,buf,BUFFER_SIZE,0);
-	  cout<<buf<<endl;
-	  sleep(1);
-	  //usleep(5000);
 	}
-	//sleep(2);
     close(clifd);
     
     return 0;  

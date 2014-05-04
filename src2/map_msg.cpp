@@ -22,6 +22,6 @@ int main()
         {
            ShowErr("msgrcv error");
         }
-        cout<<num_call++<<":"<<data.type<<":"<<data.msg_text<<endl;
+        cout<<num_call++<<" "<<data.msg_text<<endl;
 	}
 }

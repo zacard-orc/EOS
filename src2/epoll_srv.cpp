@@ -86,6 +86,7 @@ int main()
           {
                if(events[i].data.fd==listenfd)    
                {
+					//cout<<"Step 1 start"<<endl;
 					n_client_len = sizeof(clientaddr); 
                     connfd = accept(listenfd,(struct sockaddr *)&clientaddr, (socklen_t *)&n_client_len);
                     if(connfd<0){
@@ -102,6 +103,7 @@ int main()
 			   //把新数据这件事儿在EPOLL EVENT 中注册新FD，如果没数据，则关闭EPOLL.EVENTS.DATA.FD
                else if(events[i].events&EPOLLIN)    
                {
+				    //cout<<"Step 2 start"<<endl;
                     if ((sockfd = events[i].data.fd) < 0) continue;
                     if ((n_readflag= read(sockfd, RECV_MSG[i], MAXLINE)) < 0) {
                          if (errno == ECONNRESET) {
@@ -124,6 +126,7 @@ int main()
                }
                else if(events[i].events&EPOLLOUT)
                {   
+					//cout<<"Step 3 start"<<endl;
                     sockfd = events[i].data.fd;
                    	write(events[i].data.fd,ANSW_MSG,strlen(ANSW_MSG));
                     bzero(RECV_MSG[i],EP_TXT_LEN);
