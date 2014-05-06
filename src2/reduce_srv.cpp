@@ -119,6 +119,7 @@ int main()
                {   
 			   		//cout<<"Step 3 start"<<endl;
                     sockfd = events[i].data.fd;
+					sleep(5);
                    	write(events[i].data.fd,ANSW_MSG,strlen(ANSW_MSG));
                     bzero(RECV_MSG[i],EP_TXT_LEN);
                     ev.data.fd=sockfd;
