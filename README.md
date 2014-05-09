@@ -12,13 +12,14 @@ Progress
 2014.05.03 25% reduce server    
 2014.05.04 30% all road firstly  
 2014.05.06 35% add auto-reconnect & connect timeout  
+2014.05.09 40% add backgroud runtime  
 
 
-Usage  
-===  
-make
-1, ./reduce_srv|./fun_redu  
-2, ./epoll_srv    
-3, ./map_msg|./fun_map|./tcp_cli
+Usage    
+===    
+1, make     
+2, ./reduce_srv|./fun_redu   
+3, ./epoll_srv    
+4, ./map_msg|./fun_map|./tcp_cli
 
 fun_map and fun_redu is your custom map-reduce code based on stdin & stdout.Just like hadoop streaming.  
