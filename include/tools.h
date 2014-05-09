@@ -4,6 +4,9 @@
 #include <sys/types.h>
 #include <sys/ipc.h>
 #include <sys/msg.h>
+#include <sys/param.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <fcntl.h>
@@ -13,6 +16,8 @@
 #include <string.h>
 #include <errno.h>
 #include <pthread.h>
+#include <signal.h>
+
 
 typedef struct{
         int type;

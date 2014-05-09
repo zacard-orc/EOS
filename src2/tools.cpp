@@ -52,4 +52,28 @@ int StartMQ(int proj_id)
 };
 
 
+void init_daemon(void)
+{       
+    int pid,i;
+    if((pid=fork()))
+        exit(0);
+    else if(pid<0)
+        exit(1);
+    setsid();
+    if((pid=fork()))
+        exit(0);
+    else if(pid<0)
+        exit(1);
+    
+    for(i=0;i<NOFILE;++i)
+    {   
+        close(i);
+    }
+    chdir("/root/tt/tmp");
+    umask(0);
+    signal(SIGCHLD,SIG_IGN);
+    return;
+}
+
+
 
