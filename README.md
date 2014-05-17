@@ -13,6 +13,7 @@ Progress
 2014.05.04 30% all road firstly  
 2014.05.06 35% add auto-reconnect & connect timeout  
 2014.05.09 40% add backgroud runtime  
+2014.05.17 45% add check network status  
 
 
 Usage    
