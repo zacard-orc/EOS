@@ -14,6 +14,7 @@ Progress
 2014.05.06 35% add auto-reconnect & connect timeout  
 2014.05.09 40% add backgroud runtime  
 2014.05.17 45% add check network status  
+2014.05.18 47% add duplex list for the base of memory pool  
 
 
 Usage    
@@ -21,6 +22,6 @@ Usage
 1, make     
 2, ./reduce_srv|./fun_redu   
 3, ./epoll_srv    
-4, ./map_msg|./fun_map|./tcp_cli
+4, ./map_msg|./fun_map|./tcp_cli  
 
 fun_map and fun_redu is your custom map-reduce code based on stdin & stdout.Just like hadoop streaming.  
