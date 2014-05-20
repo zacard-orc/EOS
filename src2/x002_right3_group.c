@@ -16,40 +16,40 @@
 #include <pthread.h>
 
 //宏定义参数
-#define TNUM 4
-#define PACKET_SIZE 1024
-#define MAX_WAIT_TIME 3
+#define TNUM 500   //初始数组及变量长度
+#define PACKET_SIZE 220
 #define MAX_NO_PACKETS 5
-#define TMOUT 2000
+#define TMOUT 3000
+#define Malloc(type,n) (type *)malloc((n)*sizeof(type))
 
 //全局变量与统计、操作符号相关
 int nsend[TNUM]={0},nreceived[TNUM]={0},nloss[TNUM]={0};  //发、收、失败
 int sockfd[TNUM];
-double ndelay[TNUM][MAX_NO_PACKETS];
+int ndelay[TNUM][MAX_NO_PACKETS];
 struct sockaddr_in dest_addr[TNUM];
 struct sockaddr_in from_addr[TNUM];
+char IP[300][30];
+int TCC=0; //记录计数器
 
 
 unsigned short cal_chksum(unsigned short *addr,int len);
 int pack(int pack_no,char icmp_hd[],int id);
 int unpack(char *buf,int len,struct sockaddr_in src_addr,struct timeval *tvrecv,int ndnum,int id);
 void send_packet(int sockfd,struct sockaddr_in dest_addr,int id);
-void recv_packet(int sockfd,struct sockaddr_in src_addr,int id);
+void recv_packet(int sockfd,struct sockaddr_in src_addr,int id,struct sockaddr_in dest_addr);
 double tv_sub(struct timeval *out,struct timeval *in);
 
 void statistics(int id)
 {
-//		printf("-------- %d --------\n",id);
-		printf("ID=%d,SEND=%d,LOSS=%d,%%%d\n",id,nsend[id],nloss[id],100-(nsend[id]-nloss[id])/nsend[id]*100);
+		printf("%s:SEND=%d,LOSS=%d,LOSSPER=%.2f",IP[id],nsend[id],nloss[id],100-(((double)nsend[id]-(double)nloss[id])/nsend[id])*100);
 		int i=0;
 		double sum=0,max=0;
 		for(i=0;i<MAX_NO_PACKETS;i++)
 		{
-//			printf("%.3f ",ndelay[id][i]);
 			sum+=ndelay[id][i];
 			if(ndelay[id][i]>max) max=ndelay[id][i];
 		}
-		printf("ID=%d,AVG=%.2f,MAX=%.2f\n",id,sum/MAX_NO_PACKETS,max);
+		printf(",SUM=%.0f,AVG=%.0f,MAX=%.0f\n",sum,sum/MAX_NO_PACKETS,max);
 }
 
 
@@ -90,7 +90,7 @@ int pack(int pack_no,char icmp_hd[],int id)
         icmp->icmp_cksum=0;
         icmp->icmp_seq=pack_no;
         icmp->icmp_id=id;
-        packsize=200;              //发送的报文长度
+        packsize=100;              //发送的报文长度
         tval=(struct timeval *)icmp->icmp_data;
         gettimeofday(tval,NULL);    //记录发送时间
         icmp->icmp_cksum=cal_chksum((unsigned short *)icmp,packsize); //校验算法
@@ -101,22 +101,22 @@ int pack(int pack_no,char icmp_hd[],int id)
 /*发送ICMP报文*/
 void send_packet(int sockfd,struct sockaddr_in dest_addr_f,int id)
 {       
-	    //printf("%s\n",inet_ntoa(dest_addr_f.sin_addr));
+	    //printf("%d,%s\n",id,inet_ntoa(dest_addr_f.sin_addr));
 	    char sendpacket[PACKET_SIZE];  //icmp发送包头
 		int packetsize;
 		nsend[id]++;
 		//printf("%d\n",nsend);
         packetsize=pack(nsend[id],sendpacket,id); /*设置ICMP报头*/
-        //printf("%d\n",sendto(sockfd,sendpacket,packetsize,0,(struct sockaddr *)&dest_addr,sizeof(dest_addr))) ;
-		sendto(sockfd,sendpacket,packetsize,0,(struct sockaddr *)&dest_addr_f,sizeof(dest_addr_f));
+        //printf("%d,%2d\n",sendto(sockfd,sendpacket,packetsize,0,(struct sockaddr *)&dest_addr_f,sizeof(dest_addr_f)),id) ;
+	     sendto(sockfd,sendpacket,packetsize,0,(struct sockaddr *)&dest_addr_f,sizeof(dest_addr_f));
 
 }
 
 /*接收所有ICMP报文*/
-void recv_packet(int sockfd,struct sockaddr_in src_addr_f,int id)
+void recv_packet(int sockfd,struct sockaddr_in src_addr_f,int id,struct sockaddr_in dest_addr_f)
 {       
 	    //printf("sssssssssss\n");
-		//printf("%s\n",inet_ntoa(src_addr_f.sin_addr));
+		//printf("%2d,%s\n",id,inet_ntoa(dest_addr_f.sin_addr));
 		int n,fromlen;
         extern int errno;
 		char recvpacket[PACKET_SIZE];  //icmp接受包头
@@ -124,22 +124,28 @@ void recv_packet(int sockfd,struct sockaddr_in src_addr_f,int id)
         fromlen=sizeof(src_addr_f);
 		struct timeval tvrecv;
         while(nreceived[id]<nsend[id])
-        {       
-			   //printf("%d,%d\n",nreceived[id],nsend[id]);
+        {      
+			  if(id>92)
+				 printf("%2d,%d,%d,%s\n",id,nreceived[id],nsend[id],inet_ntoa(dest_addr_f.sin_addr));
+
 				if(recvfrom(sockfd,recvpacket,sizeof(recvpacket),0,(struct sockaddr *)&src_addr_f,&fromlen)==-1)
 				{
-					printf("%d : %s time-out %dms,seq=%d\n",id,inet_ntoa(src_addr_f.sin_addr),TMOUT,nloss[id]);				
+					if(errno==EAGAIN) break;
+					perror("sssss:");
+					printf("%d : %s time-out %dms,seq=%d\n",id,inet_ntoa(dest_addr_f.sin_addr),TMOUT,nloss[id]);				
 					ndelay[id][nreceived[id]]=TMOUT;
 					nloss[id]++;
 					nreceived[id]++;
 					
-				} else
+				} 
+				
+				else
 				{
-                gettimeofday(&tvrecv,NULL);  /*记录接收时间*/
-				//printf("zzzzzzzzzz\n");
-                if(unpack(recvpacket,n,src_addr_f,&tvrecv,nreceived[id],id)==-1)continue;
-                nreceived[id]++;
+					gettimeofday(&tvrecv,NULL);  /*记录接收时间*/
+					if(unpack(recvpacket,n,src_addr_f,&tvrecv,nreceived[id],id)==-1)continue;
+					nreceived[id]++;
 				}
+				usleep(50000);
 
         }
 }
@@ -167,7 +173,7 @@ int unpack(char *buf,int len,struct sockaddr_in src_addr_f,struct timeval *tvrec
         {       
 				tvsend=(struct timeval *)icmp->icmp_data;
 				rtt=ndelay[id][ndnum]=tv_sub(tvrecv,tvsend);
-                printf("%d : %d byte from %s: icmp_seq=%u ttl=%d rtt=%.3f ms\n",id,
+                printf("%3d : %d byte from %s: icmp_seq=%u ttl=%d rtt=%.3f ms\n",id,
                         len,
                         inet_ntoa(src_addr_f.sin_addr),
                         icmp->icmp_seq,
@@ -207,18 +213,24 @@ void *worker(void *arg)
 	for(i=0;i<MAX_NO_PACKETS;i++)	
 	{
 		send_packet(sockfd[p_id],dest_addr[p_id],p_id); 
-		recv_packet(sockfd[p_id],from_addr[p_id],p_id);
-		usleep(500000);
+		recv_packet(sockfd[p_id],from_addr[p_id],p_id,dest_addr[p_id]);
+		//usleep(500000);
+		sleep(4);
 	}
 	statistics(p_id);
 
+}
+
+void pline(void)
+{
+	printf("=========================\n");
 }
 
 
 main(int argc,char *argv[])
 {      
 		//设置多线程
-		pthread_t ntid[TNUM];
+		pthread_t ntid[10000];
 
 		//设置SOCKET初始变量
 	    struct hostent *host;
@@ -229,31 +241,47 @@ main(int argc,char *argv[])
 		struct timeval tv_tmt;
 		tv_tmt.tv_sec=TMOUT/1000;
 		tv_tmt.tv_usec=0;
-		
+
+		//读取配置文件
+		FILE *fp=NULL;
+		char *tmpstr=NULL;
+		char *ipraw=NULL;
+		tmpstr=Malloc(char,100);
+		ipraw=Malloc(char,30);
+		fp=fopen("./ping.cnf", "r");
+		while(fgets(tmpstr,100,fp)!=NULL)
+		{
+			sscanf(tmpstr,"%[^\n]",ipraw);
+			if(strlen(ipraw)!=0)
+			{
+			     strcpy(IP[TCC],ipraw);
+			     printf("Load IP:%s\n",ipraw);
+			     TCC++;
+			}
+		}
 		
 		//批量设置socket的属性
+		printf("%d\n",TCC);	
         protocol=getprotobyname("icmp");
-		for(i=0;i<TNUM;i++)
+		for(i=0;i<TCC;i++)
 		{
 			sockfd[i]=socket(AF_INET,SOCK_RAW,protocol->p_proto) ;
 			setsockopt(sockfd[i],SOL_SOCKET,SO_RCVTIMEO,&tv_tmt,sizeof(tv_tmt));
 			bzero(&dest_addr[i],sizeof(dest_addr[i]));
 			dest_addr[i].sin_family=AF_INET;
-			inet_aton("127.0.0.1",&dest_addr[i].sin_addr); 
-			//inet_aton("99.99.22.133",&dest_addr[i].sin_addr);
+			inet_aton(IP[i],&dest_addr[i].sin_addr);
 		}
-		   inet_aton("99.99.22.133",&dest_addr[1].sin_addr);
 
-		for(i=0;i<TNUM;i++)
+		pline();
+		
+		//创建线程运行
+		for(i=0;i<TCC;i++)
 		{
 			pthread_create(&ntid[i],NULL,worker,&i);				
-			sleep(1);
-			//usleep(500);
+			usleep(5000);
 		}
 
-  		//inet_aton("99.99.22.133",&dest_addr.sin_addr);
-
-		sleep(15);
+		sleep(30);
         return 0;
 }
 
