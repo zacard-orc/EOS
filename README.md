@@ -15,6 +15,7 @@ Progress
 2014.05.09 40% add backgroud runtime  
 2014.05.17 45% add check network status  
 2014.05.18 47% add duplex list for the base of memory pool  
+2014.05.20 48% fix the network status checking  
 
 
 Usage    
